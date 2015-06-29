@@ -66,9 +66,9 @@
             <fileset dir="${tmp}" includes="**/*"/>
             <manifest>
                 <attribute name="Implementation-Version" value="${repository.revision}"/>
-                <attribute name="Implementation-Vendor" value="Foundation Medicine"/>
-                <attribute name="Main-Class" value="com.foundationmedicine.cmdline.FmiCommandLine"/>
-                <attribute name="Implementation-Title" value="FMI Research Tools"/>
+                <attribute name="Implementation-Vendor" value="Tim Fennell"/>
+                <attribute name="Main-Class" value="com.tfenne.cmdline.Main"/>
+                <attribute name="Implementation-Title" value="Tim Fennell's BFX Tools"/>
             </manifest>
         </jar>
 
