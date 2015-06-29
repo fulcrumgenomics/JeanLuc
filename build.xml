@@ -1,0 +1,80 @@
+<?xml version="1.0"?>
+
+<!--
+ - Build file for tools Tim's private tools for manipulating genomic data.
+-->
+
+<project name="JeanLuc" basedir="." default="all">
+
+    <property name="src" value="src"/>
+    <property name="lib" value="lib"/>
+    <property name="dist" value="dist"/>
+    <property name="classes" value="classes"/>
+    <property name="tmp"  value="tmp"/>
+
+    <property name="javac.target" value="1.8"/>
+    <property name="javac.debug" value="true"/>
+
+    <!-- Get GIT hash, if available, otherwise leave it blank.  -->
+    <exec executable="git" outputproperty="repository.revision" failifexecutionfails="true" errorproperty="">
+        <arg value="log"/>
+        <arg value="-1"/>
+        <arg value="--pretty=format:%H_%at"/>
+    </exec>
+    <property name="repository.revision" value=""/>
+
+    <!-- INIT -->
+    <target name="init">
+        <path id="classpath">
+            <fileset dir="${lib}">
+                <include name="**/*.jar"/>
+            </fileset>
+        </path>
+    </target>
+
+    <!-- CLEAN -->
+    <target name="clean">
+        <delete dir="${classes}"/>
+        <delete dir="${dist}"/>
+    </target>
+
+    <!-- COMPILE -->
+    <target name="compile" depends="init" description="Compile files without cleaning">
+        <mkdir dir="${classes}"/>
+
+        <javac destdir="${classes}"
+               debug="${javac.debug}"
+               sourcepath=""
+               srcdir="${src}"
+               includes="**/*.java"
+               source="${javac.target}"
+               target="${javac.target}"
+               includeantruntime="false">
+            <classpath refid="classpath"/>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile" description="Builds the main executable jar">
+        <mkdir dir="${tmp}"/>
+        <unjar dest="${tmp}">
+            <fileset dir="${lib}" includes="*.jar"/>
+        </unjar>
+
+        <mkdir dir="${dist}"/>
+        <jar destfile="${dist}/jeanluc.jar" compress="no">
+            <fileset dir="${classes}" includes="**/*"/>
+            <fileset dir="${tmp}" includes="**/*"/>
+            <manifest>
+                <attribute name="Implementation-Version" value="${repository.revision}"/>
+                <attribute name="Implementation-Vendor" value="Foundation Medicine"/>
+                <attribute name="Main-Class" value="com.foundationmedicine.cmdline.FmiCommandLine"/>
+                <attribute name="Implementation-Title" value="FMI Research Tools"/>
+            </manifest>
+        </jar>
+
+        <delete dir="${tmp}"/>
+    </target>
+
+    <!-- ALL -->
+    <target name="all" depends="jar"  description="Default build target"/>
+</project>
