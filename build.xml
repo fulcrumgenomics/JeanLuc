@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 
 <!--
- - Build file for tools Tim's private tools for manipulating genomic data.
+ - Build file for Fulcrum Genomic's tools for manipulating genomic data.
 -->
 
 <project name="JeanLuc" basedir="." default="all">
@@ -66,9 +66,9 @@
             <fileset dir="${tmp}" includes="**/*"/>
             <manifest>
                 <attribute name="Implementation-Version" value="${repository.revision}"/>
-                <attribute name="Implementation-Vendor" value="Tim Fennell"/>
-                <attribute name="Main-Class" value="com.tfenne.cmdline.Main"/>
-                <attribute name="Implementation-Title" value="Tim Fennell's BFX Tools"/>
+                <attribute name="Implementation-Vendor" value="Fulcrum Genomics"/>
+                <attribute name="Main-Class" value="com.fulcrumgenomics.cmdline.Main"/>
+                <attribute name="Implementation-Title" value="Fulcrum Genomic's BFX Tools"/>
             </manifest>
         </jar>
 
