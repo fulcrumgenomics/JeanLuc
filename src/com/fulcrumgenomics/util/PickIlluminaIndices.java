@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015, Timothy Fennell
+ * Copyright (c) 2015, Fulcrum Genomics LLC
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -25,9 +25,9 @@
  * POSSIBILITY OF SUCH DAMAGE.
  */
 
-package com.tfenne.util;
+package com.fulcrumgenomics.util;
 
-import com.tfenne.cmdline.Utilities;
+import com.fulcrumgenomics.cmdline.Utilities;
 import htsjdk.samtools.util.*;
 import picard.cmdline.CommandLineProgram;
 import picard.cmdline.CommandLineProgramProperties;
