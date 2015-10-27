@@ -6,7 +6,7 @@
 
 <project name="JeanLuc" basedir="." default="all">
 
-    <property name="src" value="src"/>
+    <property name="src" value="src/java"/>
     <property name="scripts" value="src/scripts"/>
     <property name="lib" value="lib"/>
     <property name="dist" value="dist"/>
