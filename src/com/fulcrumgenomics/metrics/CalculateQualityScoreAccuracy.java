@@ -27,7 +27,6 @@
 
 package com.fulcrumgenomics.metrics;
 
-import com.fulcrumgenomics.cmdline.Utilities;
 import htsjdk.samtools.SAMRecord;
 import htsjdk.samtools.SamReader;
 import htsjdk.samtools.SamReaderFactory;
@@ -42,6 +41,7 @@ import picard.cmdline.CommandLineProgram;
 import picard.cmdline.CommandLineProgramProperties;
 import picard.cmdline.Option;
 import picard.cmdline.StandardOptionDefinitions;
+import picard.cmdline.programgroups.Metrics;
 
 import java.io.File;
 import java.util.HashMap;
@@ -59,7 +59,7 @@ import java.util.Map;
 @CommandLineProgramProperties(
         usage = "Calculates the accuracy of quality scores.",
         usageShort = "Calculates the accuracy of quality scores.",
-        programGroup = Utilities.class
+        programGroup = Metrics.class
 )
 public class CalculateQualityScoreAccuracy extends CommandLineProgram {
     @Option(shortName = StandardOptionDefinitions.INPUT_SHORT_NAME,
