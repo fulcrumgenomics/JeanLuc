@@ -1,5 +1,6 @@
 # Script to generate a chart of quality score distribution in a file
-# @author nhomer
+# @author Nils Homer
+
 
 # Parse the arguments
 args <- commandArgs(trailing=T)
@@ -25,36 +26,70 @@ for (i in 1:length(startFinder))
         }
 }
 
-metrics <- read.table(metricsFile, header=T, nrows=1, sep="\t", skip=firstBlankLine)
+metrics <- read.table(metricsFile, header=T, nrows=2, sep="\t", skip=firstBlankLine)
 histogram <- read.table(metricsFile, header=T, sep="\t", skip=secondBlankLine)
 
-histogram$coverage = histogram$coverage[!is.na(histogram$count)]
-histogram$count = histogram$count[!is.na(histogram$count)]
+coverages = rbind(histogram$coverage, histogram$coverage)
+counts = rbind(histogram$count_WHOLE_GENOME, histogram$count_NON_ZERO_REGIONS)
+labels = c("Whole Genome", "Non-Zero Regions")
+colors = c("blue", "green")
 
-# Then plot the histogram as a PDF
-pdf(outputFile)
+ymins = c();
+ymaxs = c();
+percentOfMeans = c()
+percentCovereds = c();
 
-meanCoverage <- metrics$MEAN_COVERAGE;
-percentOfMean <- histogram$coverage / meanCoverage; # x-axis
-percentCovered <- rep(0, length(histogram$count)); # y-axis
-# must do a cumulative sume of percentCovered
-totalCount = sum(as.numeric(histogram$count));
-for (i in 1:length(percentCovered)) {
-    percentCovered[i] = 100.0 * sum(as.numeric(histogram$count[i:length(percentCovered)])) / totalCount;
+for (i in 1:2) {
+	coverage = coverages[i,];
+	count = counts[i,];
+
+	coverage = coverage[!is.na(count)];
+	count = count[!is.na(count)];
+
+	meanCoverage = metrics$MEAN_COVERAGE[i];
+	percentOfMean <- coverage / meanCoverage; # x-axis
+	percentCovered <- rep(0, length(count)); # y-axis
+
+	# must do a cumulative sume of percentCovered
+	totalCount = sum(as.numeric(count));
+	for (j in 1:length(percentCovered)) {
+		percentCovered[j] = 100.0 * sum(as.numeric(count[j:length(percentCovered)])) / totalCount;
+	}
+
+	ymin = percentCovered[round(meanCoverage+1)]
+	ymax = min(100,max(percentCovered));
+
+	ymins = append(ymins, ymin);
+	ymaxs = append(ymaxs, ymax);
+	percentOfMeans = append(percentOfMeans, list(percentOfMean));
+	percentCovereds = append(percentCovereds, list(percentCovered));
 }
 
-ymin = percentCovered[round(meanCoverage+1)];
-ymax = min(100,max(percentCovered))
+ymin = min(ymins);
+ymax = max(ymaxs);
 
-plot(x=percentOfMean,
-     y=percentCovered,
-     xlim=c(0, 1.0),
-     ylim=c(ymin, ymax),
-     type="l",
-     main=paste("WGS Base Coverage Plot", ifelse(is.na(bamFile),"",paste("\nin file",bamFile))," ",ifelse(subtitle == "","",paste("(",subtitle,")",sep="")),sep=""),
-     xlab="Fold Coverage of Mean",
-     ylab="% of Bases Covered",
-     col="blue",
-     lwd=5);
+# Then plot the histogram as a PDF
+pdf(outputFile);
+
+plot(x=c(0, 1.0),
+		y=c(ymin, ymax),
+		xlim=c(0, 1.0),
+		ylim=c(ymin, ymax),
+		type="n",
+		main=paste("WGS Base Coverage Plot", ifelse(is.na(bamFile),"",paste("\nin file",bamFile))," ",ifelse(subtitle == "","",paste("(",subtitle,")",sep="")),sep=""),
+		xlab="Fold Coverage of Mean",
+		ylab="% of Bases Covered");
+
+for (i in 1:2) {
+	label = labels[i];
+	color = colors[i]
+	percentOfMean = percentOfMeans[[i]];
+	percentCovered = percentCovereds[[i]];
+
+	lines(percentOfMean, percentCovered, col=color, lwd=5);
+}
+
+legend(x="topright", legend=labels, lwd=5, col=colors);
+
 dev.off()
 
