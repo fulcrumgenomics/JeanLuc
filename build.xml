@@ -13,6 +13,18 @@
     <property name="classes" value="classes"/>
     <property name="tmp"  value="tmp"/>
 
+	<!-- Settings for Picard and HTSJDK -->
+	<property name="picard" value="picard"/>
+	<property name="picard-lib-dir" value="${dist}/picard_lib_dir"/>
+	<property name="picard-git-url" value="https://github.com/broadinstitute/picard.git"/>
+	<property name="picard-url" value="https://github.com/broadinstitute/picard/archive"/>
+	<property name="htsjdk-url" value="https://github.com/samtools/htsjdk/archive"/>
+	<property name="htsjdk-classes" value="${picard}/htsjdk/classes"/>
+	<property name="picard-classes" value="${picard}/classes"/>
+	<property name="picard-githash" value="master"/>
+	<property name="htsjdk-githash" value="master"/>
+
+	<!-- Javac settings -->
     <property name="javac.target" value="1.8"/>
     <property name="javac.debug" value="true"/>
 
@@ -24,23 +36,123 @@
     </exec>
     <property name="repository.revision" value=""/>
 
+    <!-- Check if Picard exists -->
+    <target name="check-picard">
+        <available file="${picard}" type="dir" property="picard.public.present"/>
+    </target>
+
     <!-- INIT -->
     <target name="init">
         <path id="classpath">
             <fileset dir="${lib}">
                 <include name="**/*.jar"/>
             </fileset>
+			<fileset dir="${picard-lib-dir}">
+				<include name="**/*.jar"/>
+			</fileset>
         </path>
     </target>
 
     <!-- CLEAN -->
-    <target name="clean">
+    <target name="clean-picard-if-exists" depends="check-picard" if="${picard.present}">
+        <antcall target="clean-picard" inheritall="true"/>
+    </target>
+
+    <target name="clean" depends="clean-picard-if-exists">
         <delete dir="${classes}"/>
         <delete dir="${dist}"/>
     </target>
 
+    <!-- Set PICARD and HTSJDK version -->
+
+	<!-- Gets the info on the current branch from git and sets it in htsjdk.version -->
+	<target name="set-htsjdk-version">
+		<!-- TODO: do not hard code in htsjdk directory -->
+		<exec executable="sh" dir="${picard}/htsjdk" outputproperty="htsjdk-version">
+			<arg value="-c"/>
+			<arg value="git log -1 --pretty=format:%H_%at"/>
+		</exec>
+		<echo>Setting htsjdk-version to ${htsjdk-version}</echo>
+	</target>
+
+	<!-- Gets the info on the current branch from git and sets it in picard-version -->
+	<target name="set-picard-version">
+		<exec executable="sh" dir="${picard}" outputproperty="picard-version">
+			<arg value="-c"/>
+			<arg value="git log -1 --pretty=format:%H_%at"/>
+		</exec>
+		<echo>Setting picard-version to ${picard-version}</echo>
+	</target>
+
+	<!-- CLONE Picard and Htsjdk -->
+	<target name="clone-picard" description="Download Picard sources from Github">
+		<exec executable="git" failonerror="true">
+			<arg value="clone"/>
+			<arg value="${picard-git-url}"/>
+			<arg value="${picard}"/>
+		</exec>
+		<exec dir="${picard}" executable="git" failonerror="true">
+			<arg value="checkout"/>
+			<arg value="${picard-githash}"/>
+		</exec>
+		<ant antfile="build.xml" dir="${picard}" target="clone-htsjdk" inheritall="false"/>
+		<exec dir="${picard}/htsjdk" executable="git" failonerror="true">
+			<arg value="checkout"/>
+			<arg value="${htsjdk-githash}"/>
+		</exec>
+	</target>
+	
+	<!-- DOWNLOAD Picard and Htsjdk -->
+	<target name="download-picard" description="Download Picard sources from Github">
+		<!-- download a specific commit from picard -->
+		<exec executable="wget" failonerror="true">
+			<arg value="-q"/>
+			<arg value="${picard-url}/${picard-githash}.tar.gz"/>
+		</exec>
+		<!-- extract the picard tarball -->
+		<exec executable="tar" failonerror="true">
+			<arg value="-zxf"/>
+			<arg value="${picard-githash}.tar.gz"/>
+		</exec>
+		<!-- move picard into place -->
+		<move todir="${picard}">
+			<fileset dir="picard-${picard-githash}"/>
+		</move>
+		<!-- delete the picard tarball -->
+        <delete dir="${picard-githash}.tar.gz"/>
+		<!-- download a specific commit from htsjdk -->
+		<exec dir="${picard}" executable="wget" failonerror="true">
+			<arg value="-q"/>
+			<arg value="${htsjdk-url}/${htsjdk-githash}.tar.gz"/>
+		</exec>
+		<!-- extract the htsjdk tarball -->
+		<exec dir="${picard}" executable="tar" failonerror="true">
+			<arg value="-zxf"/>
+			<arg value="${htsjdk-githash}.tar.gz"/>
+		</exec>
+		<!-- move htsjdk into place -->
+		<move todir="${picard}/htsjdk">
+			<fileset dir="${picard}/htsjdk-${htsjdk-githash}"/>
+		</move>
+		<!-- delete the htsjdk tarball -->
+		<delete dir="${picard}/${htsjdk-githash}.tar.gz"/>
+	</target>
+
     <!-- COMPILE -->
-    <target name="compile" depends="init" description="Compile files without cleaning">
+    <target name="build-picard" depends="set-picard-version, set-htsjdk-version" description="Build Picard, and grab build jars">
+        <ant antfile="build.xml" dir="${picard}" target="clean" inheritall="false"/>
+        <ant antfile="build.xml" dir="${picard}" target="all" inheritall="false"/>
+        <copy todir="${picard-lib-dir}">
+            <fileset dir="${picard}/dist" includes="**/*-*.jar"/>
+            <fileset dir="${picard}/lib" includes="*.jar"/>
+            <fileset dir="${picard}/dist/htsjdk_lib_dir" includes="**/*-*.jar" />
+        </copy>
+        <copy todir="${dist}">
+            <fileset dir="${picard}/dist" includes="**/*.jar" excludes="**/*-*.jar"/>
+        </copy>
+    </target>
+
+    <target name="compile" depends="init, build-picard" description="Compile files without cleaning">
         <mkdir dir="${classes}"/>
 
         <javac destdir="${classes}"
@@ -59,6 +171,10 @@
         <mkdir dir="${tmp}"/>
         <unjar dest="${tmp}">
             <fileset dir="${lib}" includes="*.jar"/>
+			<fileset dir="${picard-lib-dir}">
+				<include name="**/*.jar"/>
+				<exclude name="**/picard-annotations.jar"/>
+			</fileset>
         </unjar>
 
         <mkdir dir="${dist}"/>
@@ -71,6 +187,8 @@
                 <attribute name="Implementation-Vendor" value="Fulcrum Genomics"/>
                 <attribute name="Main-Class" value="com.fulcrumgenomics.cmdline.Main"/>
                 <attribute name="Implementation-Title" value="Fulcrum Genomic's BFX Tools"/>
+                <attribute name="Picard-Version" value="${picard-version}"/>
+                <attribute name="HTSJDK-Version" value="${htsjdk-version}"/>
             </manifest>
         </jar>
 
