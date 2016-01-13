@@ -40,6 +40,15 @@ import java.util.*;
  * Stores information about samples from an Illumina Experiment Manager Sample Sheet (typically a MiSeq).  The
  * samples may also include derived information.  If library id is not specified, it will be set to the sample name.
  *
+ * Optional fields include support for specifying the expected sample barcode for each sample.  The sample barcode
+ * can be present as a sub-sequence (or sub-sequences) in the i7 or i5 read.  If additional bases are found in the i7
+ * or i5 read, such as molecular barcodes, the should be included as Ns.  It is up to the developer to obtain the
+ * correct read structure elsewhere to infer which bases are sample barcode and which bases are not (ex. molecular
+ * identifiers).  If the sample barcode is inline in either read of a pair, the sample barcode sequence can be specified
+ * here.  In this case, only include the sample barcode, and not the additional bases, such as template bases.
+ *
+ * NB: the lookup in the columns in the Sample Sheet is case insensitive.
+ *
  * @author Nils Homer
  */
 public class SampleSheet implements Iterable<Sample> {
@@ -52,10 +61,10 @@ public class SampleSheet implements Iterable<Sample> {
     public static final String DESCRIPTION    = "Description";
 
     /** Optional header names for standard fields in the Illumina Experiment Manager Sample Sheet. */
-    public static final String R1_BARCODE_BASES = "R1_Bases";
-    public static final String R2_BARCODE_BASES = "R2_Bases";
-    public static final String I7_BASES         = "I7_Bases";
-    public static final String I5_BASES         = "I5_Bases";
+    public static final String R1_BARCODE_BASES = "R1_Barcode_Bases";
+    public static final String R2_BARCODE_BASES = "R2_Barcode_Bases";
+    public static final String I7_BASES         = "Index"; // NB: wouldn't it be nice if this had a better name?
+    public static final String I5_BASES         = "Index2"; // NB: wouldn't it be nice if this had a better name?
 
     private List<Sample> samples = new ArrayList<>();
 
@@ -98,7 +107,7 @@ public class SampleSheet implements Iterable<Sample> {
                     }
                     // create the map and store it
                     final Map<String, String> map = new HashMap<>();
-                    for (int i = 0; i < values.size(); i++) map.put(header.get(i).trim(), values.get(i).trim());
+                    for (int i = 0; i < values.size(); i++) map.put(header.get(i).toUpperCase().trim(), values.get(i).trim());
                     sampleData.add(map);
                     rowNumber++;
                 }
@@ -148,7 +157,7 @@ public class SampleSheet implements Iterable<Sample> {
 
     /** Gets the trimmed value of the given key (`name`) from the map.  If empty or not found, returns null */
     private static String getStringField(final Map<String, String> sampleDatum, final String name) {
-        String str = sampleDatum.get(name);
+        String str = sampleDatum.get(name.toUpperCase());
         if (null != str) str = str.trim();
         if (null == str || str.isEmpty()) return null;
         return str;

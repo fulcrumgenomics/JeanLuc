@@ -23,6 +23,7 @@
     <property name="htsjdk-url" value="https://github.com/samtools/htsjdk/archive"/>
     <property name="htsjdk-classes" value="${picard}/htsjdk/classes"/>
     <property name="picard-classes" value="${picard}/classes"/>
+    <property name="picard-testclasses" value="${picard}/testclasses"/>
     <property name="picard-githash" value="master"/>
     <property name="htsjdk-githash" value="master"/>
     
@@ -215,6 +216,7 @@
             <classpath>
                 <pathelement path="${classes}"/>
                 <pathelement path="${classes.test}"/>
+                <pathelement location="${picard-testclasses}"/>
                 <pathelement path="${scripts}"/>
             </classpath>
             <classfileset dir="${classes.test}">
@@ -251,6 +253,7 @@
                 <classpath>
                     <path refid="classpath"/>
                     <pathelement location="${classes}"/>
+                    <pathelement location="${picard-testclasses}"/>
                 </classpath>
                 <compilerarg line="@{compiler.args}"/>
             </javac>
