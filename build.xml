@@ -18,7 +18,7 @@
     <!-- Settings for Picard and HTSJDK -->
     <property name="picard" value="picard"/>
     <property name="picard-lib-dir" value="${dist}/picard_lib_dir"/>
-    <property name="picard-git-url" value="https://github.com/broadinstitute/picard.git"/>
+    <property name="picard-git-url" value="git@github.com:broadinstitute/picard.git"/>
     <property name="picard-url" value="https://github.com/broadinstitute/picard/archive"/>
     <property name="htsjdk-url" value="https://github.com/samtools/htsjdk/archive"/>
     <property name="htsjdk-classes" value="${picard}/htsjdk/classes"/>
