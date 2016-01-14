@@ -43,7 +43,6 @@ import picard.cmdline.Option;
 import picard.cmdline.StandardOptionDefinitions;
 import picard.illumina.ExtractIlluminaBarcodes;
 import picard.illumina.ExtractIlluminaBarcodes.BarcodeMetric;
-import picard.illumina.parser.ReadDescriptor;
 import picard.illumina.parser.ReadStructure;
 import picard.util.IlluminaUtil;
 
@@ -110,16 +109,16 @@ public class DemuxFastqs extends CommandLineProgram {
             ;
 
     @Option(shortName="R1", doc="Input fastq file (optionally gzipped) for the first read of paired end data.")
-    public File READ_ONE_FASTQ;
+    public List<File> READ_ONE_FASTQ;
 
     @Option(shortName="R2", doc="Input fastq file (optionally gzipped) for the second read of paired end data.")
-    public File READ_TWO_FASTQ;
+    public List<File> READ_TWO_FASTQ;
 
     @Option(shortName="I7", doc="Input fastq file (optionally gzipped) for the i7 sequence.")
-    public File I7_FASTQ;
+    public List<File> I7_FASTQ;
 
     @Option(shortName="I5", doc="Input fastq file (optionally gzipped) for the i5 sequence.")
-    public File I5_FASTQ;
+    public List<File> I5_FASTQ;
 
     @Option(shortName = "RS1", doc = ReadStructure.PARAMETER_DOC) // TODO: RS doc
     public String READ_ONE_READ_STRUCTURE;
@@ -213,10 +212,10 @@ public class DemuxFastqs extends CommandLineProgram {
     @Override
     protected int doWork() {
         // Check all input and output files are readable or writable respectively.
-        IOUtil.assertFileIsReadable(READ_ONE_FASTQ);
-        IOUtil.assertFileIsReadable(READ_TWO_FASTQ);
-        IOUtil.assertFileIsReadable(I7_FASTQ);
-        IOUtil.assertFileIsReadable(I5_FASTQ);
+        READ_ONE_FASTQ.stream().forEach(IOUtil::assertFileIsReadable);
+        READ_TWO_FASTQ.stream().forEach(IOUtil::assertFileIsReadable);
+        I7_FASTQ.stream().forEach(IOUtil::assertFileIsReadable);
+        I5_FASTQ.stream().forEach(IOUtil::assertFileIsReadable);
         IOUtil.assertFileIsReadable(SAMPLE_SHEET);
         IOUtil.assertDirectoryIsWritable(OUTPUT);
         IOUtil.assertFileIsWritable(METRICS_FILE);
@@ -250,7 +249,7 @@ public class DemuxFastqs extends CommandLineProgram {
         final SAMFileWriter[] writers = createSamFileWriters(sampleSheet);
 
         // Open the input FASTQs for reading
-        final MultiFastqReader reader = new MultiFastqReader(READ_ONE_FASTQ, READ_TWO_FASTQ, I7_FASTQ, I5_FASTQ);
+        final ParallelFastqReader reader = new ParallelFastqReader(READ_ONE_FASTQ, READ_TWO_FASTQ, I7_FASTQ, I5_FASTQ);
 
         // Read in the quadruples of FASTQ records
         final FastqConverter fastqConverter = new FastqConverter(sampleSheet,
@@ -279,10 +278,13 @@ public class DemuxFastqs extends CommandLineProgram {
     }
 
     private void determineQualityFormat() {
-        final MultiFastqReader reader = new MultiFastqReader(READ_ONE_FASTQ, READ_TWO_FASTQ, I7_FASTQ, I5_FASTQ);
+        final FastqReader[] readers = new FastqReader[READ_ONE_FASTQ.size()];
+        for (int i = 0; i < READ_ONE_FASTQ.size(); i++) {
+            readers[i] = new FastqReader(READ_ONE_FASTQ.get(i), ALLOW_AND_IGNORE_EMPTY_LINES);
+        }
         final QualityEncodingDetector detector = new QualityEncodingDetector();
-        detector.add(QualityEncodingDetector.DEFAULT_MAX_RECORDS_TO_ITERATE, reader.readers.get(0));
-        reader.close();
+        detector.add(QualityEncodingDetector.DEFAULT_MAX_RECORDS_TO_ITERATE, readers);
+        for (final FastqReader reader : readers) reader.close();
 
         final FastqQualityFormat qualityFormat =  detector.generateBestGuess(QualityEncodingDetector.FileContext.FASTQ, QUALITY_FORMAT);
         if (detector.isDeterminationAmbiguous()) {
@@ -435,14 +437,6 @@ public class DemuxFastqs extends CommandLineProgram {
         private final int[] templateCycles;
         private final int[] sampleBarcodeCycles;
         private final int[] molecularBarcodeCycles;
-
-        public ReadStructureInfo(final List<ReadDescriptor> collection) {
-            super(collection);
-
-            this.templateCycles = this.templates.getCycles();
-            this.sampleBarcodeCycles = this.sampleBarcodes.getCycles();
-            this.molecularBarcodeCycles = this.molecularBarcode.getCycles();
-        }
 
         public ReadStructureInfo(final String readStructureString) {
             super(readStructureString);
@@ -687,20 +681,23 @@ public class DemuxFastqs extends CommandLineProgram {
         }
     }
 
-    /** Reads multiple FASTQs at the same time, ensuring their read names match along the way */
-    class MultiFastqReader implements Iterator<List<FastqRecord>> {
-        public final List<FastqReader> readers = new ArrayList<>();
+    /** Reads multiple FASTQs at the same time, ensuring their read names match along the way.  This is
+     * useful for when we don't have a single interleaved FASTQ. */
+    class ParallelFastqReader implements Iterator<List<FastqRecord>> {
+        public final List<SequentialFastqReader> readers = new ArrayList<>();
 
-        public MultiFastqReader(final File fastq, final File... fastqs) {
-            readers.add(new FastqReader(fastq, ALLOW_AND_IGNORE_EMPTY_LINES));
-            for (final File otherFastqs : fastqs) {
-                readers.add(new FastqReader(otherFastqs, ALLOW_AND_IGNORE_EMPTY_LINES));
+        @SafeVarargs
+        public ParallelFastqReader(final List<File> fastq, final List<File>... fastqs) {
+            readers.add(new SequentialFastqReader(fastq));
+            for (final List<File> otherFastqs : fastqs) {
+                if (otherFastqs.size() != fastq.size()) throw new PicardException("List of list fastqs had differeing lengths.");
+                readers.add(new SequentialFastqReader(otherFastqs));
             }
         }
 
         public List<FastqRecord> next() {
             final List<FastqRecord> records = new ArrayList<>();
-            records.addAll(readers.stream().map(FastqReader::next).collect(Collectors.toList()));
+            records.addAll(readers.stream().map(SequentialFastqReader::next).collect(Collectors.toList()));
             verifySameReadNames(records);
             return records;
         }
@@ -712,7 +709,7 @@ public class DemuxFastqs extends CommandLineProgram {
         }
 
         private boolean readersHaveNext(boolean desiredValue) {
-            for (final FastqReader reader : readers) {
+            for (final SequentialFastqReader reader : readers) {
                 if (reader.hasNext() != desiredValue) return false;
             }
             return true;
@@ -729,7 +726,7 @@ public class DemuxFastqs extends CommandLineProgram {
         }
 
         public void close() {
-            readers.forEach(FastqReader::close);
+            readers.forEach(SequentialFastqReader::close);
         }
     }
 

@@ -40,6 +40,7 @@ import picard.illumina.ExtractIlluminaBarcodes;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.Arrays;
 import java.util.List;
 
 /** Tests DemuxFastqs */
@@ -74,10 +75,10 @@ public class DemuxFastqsTest {
         final File metricsFile = new File(output, "DemuxFastqsTest.metrics.txt");
 
         final DemuxFastqs program = new DemuxFastqs();
-        program.READ_ONE_FASTQ          = readOneFastq;
-        program.READ_TWO_FASTQ          = readTwoFastq;
-        program.I7_FASTQ                = i7Fastq;
-        program.I5_FASTQ                = i5Fastq;
+        program.READ_ONE_FASTQ          = Arrays.asList(readOneFastq);
+        program.READ_TWO_FASTQ          = Arrays.asList(readTwoFastq);
+        program.I7_FASTQ                = Arrays.asList(i7Fastq);
+        program.I5_FASTQ                = Arrays.asList(i5Fastq);
         program.READ_ONE_READ_STRUCTURE = readOneReadStructure;
         program.READ_TWO_READ_STRUCTURE = readTwoReadStructure;
         program.I7_READ_STRUCTURE       = i7ReadStructure;
