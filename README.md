@@ -1,6 +1,5 @@
 [![Build Status](https://travis-ci.org/fulcrumgenomics/jeanluc.svg?branch=master)](https://travis-ci.org/fulcrumgenomics/jeanluc)
 
-
 # JeanLuc
 
 ## Java Requirements
