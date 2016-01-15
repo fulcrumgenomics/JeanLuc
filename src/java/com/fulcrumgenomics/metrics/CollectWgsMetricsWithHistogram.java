@@ -358,7 +358,7 @@ public class CollectWgsMetricsWithHistogram extends CommandLineProgram {
         if (collector.areHistogramsEmpty()) {
             log.warn("No valid bases found in input file. No plot will be produced.");
         } else {
-            final int rResult = RExecutor.executeFromClasspath("scripts/com/fulcrumgenomics/metrics/wgsHistogram.R",
+            final int rResult = RExecutor.executeFromClasspath("com/fulcrumgenomics/metrics/wgsHistogram.R",
                     OUTPUT.getAbsolutePath(),
                     CHART_OUTPUT.getAbsolutePath(),
                     INPUT.getName(),
