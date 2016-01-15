@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/fulcrumgenomics/jeanluc.svg?branch=master)](https://travis-ci.org/fulcrumgenomics/jeanluc)
+[![Build Status](https://travis-ci.org/fulcrumgenomics/JeanLuc.svg?branch=master)](https://travis-ci.org/fulcrumgenomics/JeanLuc)
 
 # JeanLuc
 
