@@ -27,7 +27,7 @@
 
 package com.fulcrumgenomics.personal.nhomer;
 
-import com.fulcrumgenomics.cmdline.Utilities;
+import com.fulcrumgenomics.cmdline.Personal;
 import htsjdk.samtools.*;
 import htsjdk.samtools.util.CloserUtil;
 import htsjdk.samtools.util.IOUtil;
@@ -44,8 +44,8 @@ import java.util.List;
 
 @CommandLineProgramProperties(
         usage = "Splits an optional tag in a SAM or BAM into multple optional tags.",
-        usageShort = "Splits an optional tag in a SAM or BAM into multple optional tags.",
-        programGroup = Utilities.class
+        usageShort = "Splits an optional tag in a SAM or BAM into multiple optional tags.",
+        programGroup = Personal.class
 )
 public class SplitTag extends CommandLineProgram {
 

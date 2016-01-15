@@ -27,7 +27,7 @@
 
 package com.fulcrumgenomics.personal.nhomer;
 
-import com.fulcrumgenomics.cmdline.Utilities;
+import com.fulcrumgenomics.cmdline.Personal;
 import htsjdk.samtools.*;
 import htsjdk.samtools.metrics.MetricsFile;
 import htsjdk.samtools.util.*;
@@ -46,7 +46,7 @@ import java.util.List;
 @CommandLineProgramProperties(
         usage = "Searches for DNA sequences in the read pairs.",
         usageShort = "Searches for DNA sequences in the read pairs.",
-        programGroup = Utilities.class
+        programGroup = Personal.class
 )
 public class HasSequence extends CommandLineProgram {
 
