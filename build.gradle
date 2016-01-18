@@ -33,7 +33,7 @@ jar {
     }
     
     from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
-    
+    from ('src/main/scripts') { include 'com/fulcrumgenomics/**/*.R' }
 }
 
 test {
