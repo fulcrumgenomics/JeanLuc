@@ -105,8 +105,9 @@ public class DemuxFastqs extends CommandLineProgram {
             "\n" +
             "The read structures will be used to extract the observed sample barcode and molecular identifiers from each\n" +
             "read.  The observed sample barcode will be matched to the sample barcodes extracted from the bases in the sample sheet\n" +
-            "and associated read structures."
-            ;
+            "and associated read structures.\n" +
+            "\n" +
+            ReadStructure.PARAMETER_DOC;
 
     @Option(shortName="R1", doc="Input fastq file (optionally gzipped) for the first read of paired end data.")
     public List<File> READ_ONE_FASTQ;
@@ -114,25 +115,25 @@ public class DemuxFastqs extends CommandLineProgram {
     @Option(shortName="R2", doc="Input fastq file (optionally gzipped) for the second read of paired end data.")
     public List<File> READ_TWO_FASTQ;
 
-    @Option(shortName="I7", doc="Input fastq file (optionally gzipped) for the i7 sequence.")
+    @Option(shortName="I7", doc="Input fastq file (optionally gzipped) for the index read of the Illumina i7 sequencing primer.  This is typically the I1 FASTQ (index read one for dual-indexed data).")
     public List<File> I7_FASTQ;
 
-    @Option(shortName="I5", doc="Input fastq file (optionally gzipped) for the i5 sequence.")
+    @Option(shortName="I5", doc="Input fastq file (optionally gzipped) for the index read of the Illumina i5 sequencing primer. This is typically the I2 FASTQ (index read two for dual-indexed data).")
     public List<File> I5_FASTQ;
 
-    @Option(shortName = "RS1", doc = ReadStructure.PARAMETER_DOC) // TODO: RS doc
-    public String READ_ONE_READ_STRUCTURE;
+    @Option(shortName = "RS1", doc = "Read structure for the first read of paired end data.  Set to \"1000T\" or some large value to have all bases found be template bases. See the DemuxFastqs help message for more details.")
+    public String READ_ONE_READ_STRUCTURE = "1000T";
 
-    @Option(shortName = "RS2", doc = ReadStructure.PARAMETER_DOC) // TODO: RS doc
-    public String READ_TWO_READ_STRUCTURE;
+    @Option(shortName = "RS2", doc = "Read structure for the first read of paired end data.  Set to \"1000T\" or some large value to have all bases found be template bases. See the DemuxFastqs help message for more details.")
+    public String READ_TWO_READ_STRUCTURE = "1000T";
 
-    @Option(shortName = "RS7", doc = ReadStructure.PARAMETER_DOC) // TODO: RS doc
+    @Option(shortName = "RS7", doc = "Read structure for the index read of the Illumina i7 sequencing primer.  The total bases must match the length of the index read. See the DemuxFastqs help message for more details.")
     public String I7_READ_STRUCTURE;
 
-    @Option(shortName = "RS5", doc = ReadStructure.PARAMETER_DOC) // TODO: RS doc
+    @Option(shortName = "RS5", doc = "Read structure for the index read of the Illumina i5 sequencing primer.  The total bases must match the length of the index read.See the DemuxFastqs help message for more details.")
     public String I5_READ_STRUCTURE;
 
-    @Option(shortName = "SS", doc = "The Sample Sheet (SampleSheet.csv).  This must include information about the i7/i5 ids and bases.")
+    @Option(shortName = "SS", doc = "The Sample Sheet (SampleSheet.csv).  This must include information about the i7/i5 index reads' ids and bases.")
     public File SAMPLE_SHEET;
 
     @Option(doc="Output directory. ", shortName= StandardOptionDefinitions.OUTPUT_SHORT_NAME)
@@ -227,6 +228,12 @@ public class DemuxFastqs extends CommandLineProgram {
         final ReadStructureInfo i7ReadStructureInfo = new ReadStructureInfo(I7_READ_STRUCTURE);
         final ReadStructureInfo i5ReadStructureInfo = new ReadStructureInfo(I5_READ_STRUCTURE);
 
+        if (readOneReadStructureInfo.templateCycles.length == 0) {
+            throw new PicardException("No template bases found in READ_ONE_READ_STRUCTURE.");
+        }
+        if (readTwoReadStructureInfo.templateCycles.length == 0) {
+            throw new PicardException("No template bases found in READ_TWO_READ_STRUCTURE.");
+        }
         if (i7ReadStructureInfo.templateCycles.length > 0) {
             throw new PicardException("Template bases not allowed in the i7 read.");
         }
