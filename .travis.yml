@@ -1,21 +1,24 @@
-language: java
-sudo: true
+sudo: false
+language: scala
+scala:
+- 2.11.7
 jdk:
-  - oraclejdk8
-before_cache: 
-  - rm -f $HOME/.gradle/caches/modules-2/modules-2.lock #travis recommended solution for avoiding cache problems with gradle
+- oraclejdk8
+script:
+- sbt clean coverage test && sbt coverageAggregate
+- find $HOME/.sbt -name "*.lock" | xargs rm
+- find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
 cache:
   directories:
-    - $HOME/.gradle/caches/ 
-    - $HOME/.gradle/wrapper/
+  - $HOME/.ivy2/cache
+  - $HOME/.sbt/boot/
 before_install:
-  - sudo apt-get -qq update
-  - sudo apt-get install -y --no-install-recommends r-base-dev r-recommended qpdf
-env:
- global:
-  #gradle needs this
-  - TERM=dumb
-  #limit gradle jvm memory
-  - GRADLE_OPTS=-Xmx1024m
-script:
-  - gradle test
+- pip install --user codecov
+after_success:
+- codecov
+# TODO: enable tests
+#- test "${TRAVIS_PULL_REQUEST}" = 'false' && sbt 'set version := version.value + "." + System.getenv("TRAVIS_BUILD_NUMBER")' publish
+#env:
+#  global:
+#  - secure: # TODO sonatype publish username
+#  - secure: # TODOsonatype publish password
