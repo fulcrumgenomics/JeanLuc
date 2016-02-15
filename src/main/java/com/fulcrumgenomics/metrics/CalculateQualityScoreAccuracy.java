@@ -82,7 +82,7 @@ public class CalculateQualityScoreAccuracy extends CommandLineProgram {
     }
 
     /**
-     * Main method for the program.  Checks that all input files are present and
+     * JeanLucMain method for the program.  Checks that all input files are present and
      * readable and that the output file can be written to.  Then iterates through
      * all the records accumulating metrics.  Finally writes metrics file
      */

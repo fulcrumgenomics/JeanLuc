@@ -27,17 +27,13 @@
 
 package com.fulcrumgenomics.cmdline;
 
-import htsjdk.samtools.util.CollectionUtil;
-import picard.cmdline.PicardCommandLine;
+import picard.cmdline.CommandLineProgramGroup;
 
 /**
- * Simple class that causes uses the Picard system for command line parsing and sets
- * us up to have multiple programs accessible.
- *
- * @author Tim Fennell
+ * Program group/type for utility programs.
  */
-public class Main extends PicardCommandLine {
-    public static void main(final String[] args) {
-        System.exit(new Main().instanceMain(args, CollectionUtil.makeList("com.fulcrumgenomics"), "Main"));
-    }
+public class SamOrBam implements CommandLineProgramGroup {
+    @Override public String getName() { return "SAM/BAM"; }
+    @Override public String getDescription() { return "Tools for manipulating SAM, BAM, or related data."; }
 }
+
