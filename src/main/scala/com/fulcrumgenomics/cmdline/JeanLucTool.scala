@@ -21,11 +21,20 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
-
-
 package com.fulcrumgenomics.cmdline
 
+import com.fulcrumgenomics.cmdline.JeanLucMain.FailureException
+
 /** All Jean Luc tools should extend this. */
-abstract class JeanLucTool {
-  def execute: Int
+trait JeanLucTool {
+  def execute(): Unit
+
+  /** Fail with just an exit code. */
+  def fail(exit: Int) = throw new FailureException(exit=exit)
+
+  /** Fail with the default exit code and a message. */
+  def fail(message: String) = throw new FailureException(message=Some(message))
+
+  /** Fail with a specific error code and message. */
+  def fail(exit: Int, message: String) = throw new FailureException(exit=exit, message=Some(message))
 }

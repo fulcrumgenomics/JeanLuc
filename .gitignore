@@ -1,4 +1,4 @@
 JeanLuc.iml
 .idea
-.gradle
-build
+target
+project/project
