@@ -24,7 +24,7 @@
 
 package com.fulcrumgenomics.personal.nhomer
 
-import com.fulcrumgenomics.cmdline.{JeanLucTool, Personal}
+import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool}
 import dagr.commons.CommonsDef.PathToBam
 import dagr.commons.io.Io
 import dagr.sopt._
@@ -38,7 +38,7 @@ import scala.collection.JavaConversions._
 
 @clp(
   description = "Splits an optional tag in a SAM or BAM into multiple optional tags.",
-  group = classOf[Personal]
+  group = classOf[ClpGroups.Personal]
 )
 class SplitTag
 ( @arg(doc = "Input SAM or BAM.") val input: PathToBam,
@@ -55,7 +55,7 @@ class SplitTag
     if (tagToOutput.length != 2) throw new ValidationException(s"The tag to output '$tagToOutput' must be of length two (was ${tagToOutput.length}).")
   }
 
-  override def execute: Int = {
+  override def execute(): Unit = {
     val reader: SamReader = SamReaderFactory.makeDefault.open(input.toFile)
     val writer: SAMFileWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(reader.getFileHeader, true, output.toFile)
     reader.foreach { record =>
@@ -68,6 +68,5 @@ class SplitTag
     }
     CloserUtil.close(reader)
     writer.close()
-    0
   }
 }

@@ -27,19 +27,22 @@ package com.fulcrumgenomics.cmdline
 
 import dagr.sopt.cmdline.ClpGroup
 
+/** Groups for organizing command line programs for display. */
+object ClpGroups {
+  class Personal extends ClpGroup {
+    override val name: String = "Personal"
+    override val description: String =  "Various personal programs (not supported)."
+    override val rank = Integer.MAX_VALUE
+  }
 
-class Personal extends ClpGroup {
-  val name: String = "Personal"
-  val description: String =  "Various personal programs (not supported)."
-}
+  class SamOrBam extends ClpGroup {
+    override val name: String = "SAM/BAM"
+    override val description: String = "Tools for manipulating SAM, BAM, or related data."
+  }
 
-class SamOrBam extends ClpGroup {
-  val name: String = "SAM/BAM"
-  val description: String = "Tools for manipulating SAM, BAM, or related data."
-}
-
-class Utilities extends ClpGroup {
-  val name: String = "Utilities"
-  val description: String = "Various utility programs."
+  class Utilities extends ClpGroup {
+    override val name: String = "Utilities"
+    override val description: String = "Various utility programs."
+  }
 }
 

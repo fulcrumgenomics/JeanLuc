@@ -27,7 +27,7 @@ package com.fulcrumgenomics.bam
 import java.nio.file.Path
 import java.text.DecimalFormat
 
-import com.fulcrumgenomics.cmdline.{JeanLucTool, SamOrBam}
+import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool}
 import dagr.commons.io.Io
 import dagr.commons.util.LazyLogging
 import dagr.sopt._
@@ -49,7 +49,7 @@ import scala.collection.JavaConversions._
   "records that do not overlap any of the intervals.\n\n" +
   "NOTE: this will usually produce a BAM file in which some mate-pairs are orphaned (i.e. read 1 or\n" +
   "read 2 is included, but not both), but does not update any flag fields.",
-  group = classOf[SamOrBam])
+  group = classOf[ClpGroups.SamOrBam])
 class FilterBam
 (@arg(doc = "If supplied, remove all reads that do not overlap the provided intervals.") var intervals: Option[Path] = None,
  @arg(doc = "Input BAM file.")                                         var input: Path,
@@ -64,7 +64,7 @@ class FilterBam
   Io.assertCanWriteFile(output)
   intervals.foreach(Io.assertReadable)
 
-  override def execute: Int = {
+  override def execute(): Unit = {
     //val progress: ProgressLogger = new ProgressLogger(log)
     val in: SamReader = SamReaderFactory.make.open(input.toFile)
     val iterator: SAMRecordIterator = buildInputIterator(in, intervals)
@@ -81,7 +81,6 @@ class FilterBam
     logger.info("Kept " + new DecimalFormat("#,##0").format(kept) + " records.")
     out.close()
     CloserUtil.close(iterator)
-    0
   }
   /**
     * If intervalListFile is null return an interator over all the input, otherwise returns an
@@ -94,7 +93,7 @@ class FilterBam
         val intervals: IntervalList = IntervalList.fromFile(file.toFile).uniqued
         val dict: SAMSequenceDictionary = intervals.getHeader.getSequenceDictionary
         val qs: Array[QueryInterval] = intervals.getIntervals.map(interval =>
-          new QueryInterval(dict.getSequenceIndex(interval.getContig()), interval.getStart(), interval.getEnd())).toArray
+          new QueryInterval(dict.getSequenceIndex(interval.getContig), interval.getStart, interval.getEnd)).toArray
         in.queryOverlapping(qs)
     }
   }

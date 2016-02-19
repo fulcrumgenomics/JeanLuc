@@ -24,26 +24,44 @@
 
 package com.fulcrumgenomics.cmdline
 
+import com.fulcrumgenomics.cmdline.JeanLucMain.FailureException
+import dagr.commons.util.LazyLogging
 import dagr.sopt.cmdline.CommandLineParser
 
+/**
+  * Main program for JeanLuc that loads everything up and runs the appropriate sub-command
+  */
 object JeanLucMain {
-
-  type JeanLucToolClass = Class[JeanLucTool]
-
   /** The main method */
-  def main(args: Array[String]): Unit = {
-    makeItSo(args=args) match {
-      case Some(tool) => System.exit(tool.execute)
+  def main(args: Array[String]): Unit = new JeanLucMain().makeItSo(args)
+
+  /**
+    * Exception class intended to be used by [[JeanLucMain]] and [[JeanLucTool]] to communicate
+    * non-exceptional(!) failures when running a tool.
+    */
+  private[cmdline] case class FailureException(exit:Int = 1, message:Option[String] = None) extends RuntimeException
+}
+
+class JeanLucMain extends LazyLogging {
+  /** The main method */
+  def makeItSo(args: Array[String]): Unit = {
+    val parser = new CommandLineParser[JeanLucTool]("JeanLuc")
+
+    parser.parseSubCommand(args=args, packageList=packageList) match {
       case None => System.exit(1)
+      case Some(tool) =>
+        try {
+          tool.execute
+          System.exit(0)
+        }
+        catch {
+          case ex: FailureException =>
+            ex.message.foreach(logger.fatal)
+            System.exit(ex.exit)
+        }
     }
   }
 
-  /** The main method */
-  def makeItSo(args: Array[String]): Option[JeanLucTool] = {
-    val parser = new CommandLineParser[JeanLucTool]("JeanLuc")
-    parser.parseSubCommand(args=args, packageList=getPackageList)
-  }
-
   /** The packages we wish to include in our command line **/
-  protected def getPackageList: List[String] = List[String]("com.fulcrumgenomics")
+  protected def packageList: List[String] = List[String]("com.fulcrumgenomics")
 }
