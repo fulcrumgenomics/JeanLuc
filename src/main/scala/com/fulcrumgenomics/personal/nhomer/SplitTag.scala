@@ -38,7 +38,7 @@ import scala.collection.JavaConversions._
 
 @clp(
   description = "Splits an optional tag in a SAM or BAM into multiple optional tags.",
-  group = classOf[ClpGroups.Personal]
+  group = ClpGroups.Personal
 )
 class SplitTag
 ( @arg(doc = "Input SAM or BAM.") val input: PathToBam,
