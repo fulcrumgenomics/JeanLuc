@@ -49,7 +49,7 @@ import scala.collection.JavaConversions._
   "records that do not overlap any of the intervals.\n\n" +
   "NOTE: this will usually produce a BAM file in which some mate-pairs are orphaned (i.e. read 1 or\n" +
   "read 2 is included, but not both), but does not update any flag fields.",
-  group = classOf[ClpGroups.SamOrBam])
+  group = ClpGroups.SamOrBam)
 class FilterBam
 (@arg(doc = "If supplied, remove all reads that do not overlap the provided intervals.") var intervals: Option[Path] = None,
  @arg(doc = "Input BAM file.")                                         var input: Path,
