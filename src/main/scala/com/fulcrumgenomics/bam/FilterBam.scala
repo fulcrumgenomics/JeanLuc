@@ -1,7 +1,7 @@
 /*
  * The MIT License
  *
- * Copyright (c) $year Fulcrum Genomics
+ * Copyright (c) 2016 Fulcrum Genomics LLC
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -20,14 +20,15 @@
  * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
- *
  */
+
 package com.fulcrumgenomics.bam
 
 import java.nio.file.Path
 import java.text.DecimalFormat
 
 import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool}
+import dagr.commons.CommonsDef.{PathToIntervals, PathToBam}
 import dagr.commons.io.Io
 import dagr.commons.util.LazyLogging
 import dagr.sopt._
@@ -51,13 +52,13 @@ import scala.collection.JavaConversions._
   "read 2 is included, but not both), but does not update any flag fields.",
   group = ClpGroups.SamOrBam)
 class FilterBam
-(@arg(doc = "If supplied, remove all reads that do not overlap the provided intervals.") var intervals: Option[Path] = None,
- @arg(doc = "Input BAM file.")                                         var input: Path,
- @arg(doc = "Output BAM file.")                                        var output: Path,
- @arg(doc = "If true remove all reads that are marked as duplicates.") var removeDuplicates: Boolean = true,
- @arg(doc = "Remove all unmapped reads.")                              var removeUnmappedReads: Boolean = true,
- @arg(doc = "Remove all reads with MAPQ lower than this number.")      var minMapQ: Int = 1,
- @arg(doc = "Remove all reads marked as secondary alignments.")        var removeSecondaryAlignments: Boolean = true
+( @arg(doc = "If supplied, remove all reads that do not overlap the provided intervals.") var intervals: Option[PathToIntervals] = None,
+  @arg(doc = "Input BAM file.")                                         var input: PathToBam,
+  @arg(doc = "Output BAM file.")                                        var output: PathToBam,
+  @arg(doc = "If true remove all reads that are marked as duplicates.") var removeDuplicates: Boolean = true,
+  @arg(doc = "Remove all unmapped reads.")                              var removeUnmappedReads: Boolean = true,
+  @arg(doc = "Remove all reads with MAPQ lower than this number.")      var minMapQ: Int = 1,
+  @arg(doc = "Remove all reads marked as secondary alignments.")        var removeSecondaryAlignments: Boolean = true
 ) extends JeanLucTool with LazyLogging {
 
   Io.assertReadable(input)
