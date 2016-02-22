@@ -70,15 +70,14 @@ class FilterBam
     val in: SamReader = SamReaderFactory.make.open(input.toFile)
     val iterator: SAMRecordIterator = buildInputIterator(in, intervals)
     val out: SAMFileWriter = new SAMFileWriterFactory().makeSAMOrBAMWriter(in.getFileHeader, true, output.toFile)
-    val kept: Long = iterator.filterNot { rec =>
-      (removeDuplicates && rec.getDuplicateReadFlag) ||
+    val kept: Long = iterator.count { rec =>
+      val throwOut = (removeDuplicates && rec.getDuplicateReadFlag) ||
         (removeUnmappedReads && rec.getReadUnmappedFlag) ||
         (rec.getMappingQuality < minMapQ) ||
         (removeSecondaryAlignments && !rec.getReadUnmappedFlag && rec.getNotPrimaryAlignmentFlag)
-    }.map { rec =>
-      out.addAlignment(rec)
-      1.toLong
-    }.sum[Long]
+      if (!throwOut) out.addAlignment(rec)
+      !throwOut
+    }
     logger.info("Kept " + new DecimalFormat("#,##0").format(kept) + " records.")
     out.close()
     CloserUtil.close(iterator)
