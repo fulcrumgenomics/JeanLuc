@@ -29,7 +29,7 @@ package com.fulcrumgenomics.personal.nhomer
 
 import java.nio.file.Path
 
-import com.fulcrumgenomics.cmdline.{JeanLucTool, Personal}
+import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool, Personal}
 import dagr.commons.CommonsDef.PathToBam
 import dagr.commons.io.Io
 import dagr.sopt._
@@ -42,7 +42,7 @@ import scala.io.Source
 
 @clp(
   description = "Searches for DNA sequences in the read pairs.",
-  group = classOf[Personal]
+  group = ClpGroups.Personal
 )
 class HasSequence
 ( @arg(flag = "i", doc = "Input SAM or BAM.") val input: PathToBam,
