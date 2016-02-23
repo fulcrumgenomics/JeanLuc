@@ -26,7 +26,7 @@ package com.fulcrumgenomics.personal.nhomer
 
 import java.nio.file.Path
 
-import com.fulcrumgenomics.cmdline.{JeanLucTool, Personal}
+import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool}
 import dagr.commons.CommonsDef.PathToFasta
 import dagr.commons.io.Io
 import dagr.commons.util.LazyLogging
@@ -37,7 +37,7 @@ import scala.collection.JavaConversions._
 
 @clp(
   description="Generates a list of freebayes/bamtools region specifiers.",
-  group = classOf[Personal]
+  group = ClpGroups.Personal
 )
 class GenerateRegionsFromFasta
 ( @arg(doc = "The input FASTA.") val input: PathToFasta,
@@ -48,7 +48,7 @@ class GenerateRegionsFromFasta
   Io.assertReadable(input)
   Io.assertCanWriteFile(output)
 
-  override def execute: Int = {
+  override def execute(): Unit = {
     val referenceSequenceFile = ReferenceSequenceFileFactory.getReferenceSequenceFile(input.toFile)
     val sequenceDictionary = referenceSequenceFile.getSequenceDictionary
     sequenceDictionary.getSequences.foreach { sequenceRecord =>
@@ -57,6 +57,5 @@ class GenerateRegionsFromFasta
        println(s"${sequenceRecord.getSequenceName}:$regionStart-$regionEnd")
       }
     }
-    0
   }
 }
