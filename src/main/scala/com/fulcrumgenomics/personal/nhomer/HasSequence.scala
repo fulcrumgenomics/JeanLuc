@@ -29,7 +29,7 @@ package com.fulcrumgenomics.personal.nhomer
 
 import java.nio.file.Path
 
-import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool, Personal}
+import com.fulcrumgenomics.cmdline.{ClpGroups, JeanLucTool}
 import dagr.commons.CommonsDef.PathToBam
 import dagr.commons.io.Io
 import dagr.sopt._
@@ -60,7 +60,7 @@ class HasSequence
   Io.assertCanWriteFile(metrics)
 
   // TODO: progress logging and metrics file header
-  override def execute: Int = {
+  override def execute(): Unit = {
     val sequencesReadOne = Source.fromFile(this.sequences.toFile).getLines().map(_.trim)
     val sequencesReadTwo = for (sequence <- sequencesReadOne) yield SequenceUtil.reverseComplement(sequence)
     val reader = SamReaderFactory.makeDefault.open(input.toFile)
@@ -91,7 +91,6 @@ class HasSequence
     val metricsFile = new MetricsFile[MetricBase, String]()
     metricsFile.addHistogram(outputHistogram)
     metricsFile.write(metrics.toFile)
-    0
   }
 
   private def annotateRecords(rec: SAMRecord,
