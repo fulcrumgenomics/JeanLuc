@@ -1,5 +1,10 @@
 [![Build Status](https://travis-ci.org/fulcrumgenomics/JeanLuc.svg?branch=master)](https://travis-ci.org/fulcrumgenomics/JeanLuc)
 
+
+# This project is no longer in active development.
+
+Please see [fgbio](https://github.com/fulcrumgenomics/fgbio) which replaces Jean Luc.
+
 # JeanLuc
 
 ## Java Requirements
