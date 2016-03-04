@@ -27,13 +27,7 @@
 
 package com.fulcrumgenomics.util;
 
-import com.fulcrumgenomics.cmdline.Utilities;
 import htsjdk.samtools.util.*;
-import picard.cmdline.CommandLineProgram;
-import picard.cmdline.CommandLineProgramProperties;
-import picard.cmdline.Option;
-import picard.cmdline.StandardOptionDefinitions;
-import picard.util.IlluminaUtil;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -52,72 +46,27 @@ import static java.lang.Math.pow;
  *
  * @author Tim Fennell
  */
-@CommandLineProgramProperties(
-        usage = "Picks a set of molecular indices that should work well together.",
-        usageShort = "Picks molecular indices.",
-        programGroup = Utilities.class
-)
-public class PickIlluminaIndices extends CommandLineProgram {
+class PickIlluminaIndicesCommand {
     /** The temperature at which the adapter ligation happens. */
     public static final int LIGATION_TEMPERATURE = 30;
 
-    @Option(shortName="L", doc="The length of each barcode sequence.")
-    public int INDEX_LENGTH = 8;
-
-    @Option(shortName="N", doc="The number of indices desired.")
-    public int N_INDICES = 400;
-
-    @Option(shortName="E", doc="The minimum edit distance between two indices in the set.")
-    public int EDIT_DISTANCE = 3;
-
-    @Option(shortName="AR", doc="Allow indices that are lexical reverses of one another")
-    public boolean ALLOW_REVERSES = true;
-
-    @Option(shortName="ARC", doc="Allow indices that are reverse complements of one another")
-    public boolean ALLOW_REVERSE_COMPLEMENTS = true;
-
-    @Option(shortName="Allow indices that are palindromic (read the same forwards and backwards).")
-    public boolean ALLOW_PALINDROMES = true;
-
-    @Option(shortName="Reject indices with a homo-polymer run of greater than this length.")
-    public int MAX_HOMOPOLYMER = 2;
-
-    @Option(doc="The minimum GC fraction for a barcode to be accepted.")
-    public double MIN_GC = 0;
-
-    @Option(doc="The maximum GC fraction for a barcode to be accepted.")
-    public double MAX_GC = 0.7;
-
-    @Option(shortName= StandardOptionDefinitions.OUTPUT_SHORT_NAME, doc="File to write indices to.")
+    public int INDEX_LENGTH;
+    public int N_INDICES;
+    public int EDIT_DISTANCE;
+    public boolean ALLOW_REVERSES;
+    public boolean ALLOW_REVERSE_COMPLEMENTS;
+    public boolean ALLOW_PALINDROMES;
+    public int MAX_HOMOPOLYMER;
+    public double MIN_GC;
+    public double MAX_GC;
     public File OUTPUT;
-
-    @Option(doc="Number of threads to use.")
-    public int NUM_THREADS = 4;
-
-    @Option(doc="The installation directory for ViennaRNA, used to calculate secondary structure.")
+    public int NUM_THREADS;
     public File VIENNA_RNA_DIR;
+    public double MIN_DELTAG;
+    public List<String> INDEX_ADAPTER;
+    public List<String> AVOID_SEQUENCE;
 
-    @Option(doc="The lowest deltaG that will be tolerated for secondary structure.")
-    public double MIN_DELTAG = -10;
-
-    @Option(doc="The indexed adapter sequence into which the indices will be integrated.")
-    public List<String> INDEX_ADAPTER = CollectionUtil.makeList(
-            IlluminaUtil.IlluminaAdapterPair.DUAL_INDEXED.get5PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.DUAL_INDEXED.get3PrimeAdapter()
-    ) ;
-
-    @Option(doc="Sequences that should be avoided.  Any kmer of INDEX_LENGTH that appears in these sequences and their " +
-            "reverse complements will be thrown out.")
-    public List<String> AVOID_SEQUENCE = Arrays.asList(
-            IlluminaUtil.IlluminaAdapterPair.INDEXED.get5PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.INDEXED.get3PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.DUAL_INDEXED.get5PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.DUAL_INDEXED.get3PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.NEXTERA_V2.get5PrimeAdapter(),
-            IlluminaUtil.IlluminaAdapterPair.NEXTERA_V2.get3PrimeAdapter()
-    );
-
-    final static Log log = Log.getInstance(PickIlluminaIndices.class);
+    final static Log log = Log.getInstance(PickIlluminaIndicesCommand.class);
 
     private static final int[] SCORE_BY_DISTANCE = {0, 500000, 5000, 1};
     private int defaultEdgeSetSize = 0;
@@ -226,7 +175,7 @@ public class PickIlluminaIndices extends CommandLineProgram {
      * barcode is removed.
      */
     class IndexSet extends ConcurrentSkipListSet<Index> {
-        final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<Runnable>(10000);
+        final BlockingQueue<Runnable> queue = new ArrayBlockingQueue<>(10000);
         final ThreadPoolExecutor exec = new ThreadPoolExecutor(NUM_THREADS, NUM_THREADS, 1, TimeUnit.MINUTES, queue);
 
         /** Basic constructor. */
@@ -248,16 +197,14 @@ public class PickIlluminaIndices extends CommandLineProgram {
             if (super.remove(index)) {
                 /** For each barcode queue up a job to recalculate scores and remove/add from the ranked set. */
                 for (final Index other : index.related) {
-                    exec.execute(new Runnable() {
-                        @Override public void run() {
-                            IndexSet.super.remove(other);
-                            other.removeRelated(index);
-                            other.recalculate();
-                            IndexSet.this.add(other);
+                    exec.execute(() -> {
+                        IndexSet.super.remove(other);
+                        other.removeRelated(index);
+                        other.recalculate();
+                        IndexSet.this.add(other);
 
-                            if (countdown.decrementAndGet() == 0) {
-                                synchronized (latch) { latch.notify(); }
-                            }
+                        if (countdown.decrementAndGet() == 0) {
+                            synchronized (latch) { latch.notify(); }
                         }
                     });
                 }
@@ -276,16 +223,10 @@ public class PickIlluminaIndices extends CommandLineProgram {
         }
     }
 
-    // Stock main method
-    public static void main(final String[] args) {
-        new PickIlluminaIndices().instanceMainWithExit(args);
-    }
-
-    @Override
-    protected int doWork() {
+    protected int execute() {
         // Generate all kmers
         final List<byte[]> kmers = generateAllKmers(INDEX_LENGTH);
-        List<Index> indexes = new LinkedList<Index>();
+        List<Index> indexes = new LinkedList<>();
         log.info("Generated " + kmers.size() + " kmers.");
 
         this.defaultEdgeSetSize = guessAtNumberOfEdgesPerBarcode(INDEX_LENGTH, EDIT_DISTANCE);
@@ -438,7 +379,7 @@ public class PickIlluminaIndices extends CommandLineProgram {
      * from the set the barcode that comes later in the list.
      */
     private void filterOutReverseComplements(final List<Index> indexes) {
-        final LinkedHashSet<Index> tmp = new LinkedHashSet<Index>();
+        final LinkedHashSet<Index> tmp = new LinkedHashSet<>();
         for (final Index bc : indexes) {
             if (!tmp.contains(bc.reverseComplement())) tmp.add(bc);
         }
@@ -451,7 +392,7 @@ public class PickIlluminaIndices extends CommandLineProgram {
      * from the set the barcode that comes later in the list.
      */
     private void filterOutReverses(final List<Index> indexes) {
-        final LinkedHashSet<Index> tmp = new LinkedHashSet<Index>();
+        final LinkedHashSet<Index> tmp = new LinkedHashSet<>();
         for (final Index bc : indexes) {
             if (!tmp.contains(bc.reverse())) tmp.add(bc);
         }
@@ -461,7 +402,7 @@ public class PickIlluminaIndices extends CommandLineProgram {
 
     /** Filters out any indices that are kmers contained in the list of sequences to avoid. */
     private void filterForAvoidSequences(final List<Index> indexes) {
-        final Set<String> avoidKmers = new HashSet<String>();
+        final Set<String> avoidKmers = new HashSet<>();
         for (final String seq : AVOID_SEQUENCE) {
             for (int i=0; i<seq.length() - INDEX_LENGTH + 1; ++i) {
                 final String sub = seq.substring(i, i+ INDEX_LENGTH);
@@ -497,17 +438,14 @@ public class PickIlluminaIndices extends CommandLineProgram {
      * the "least connected".  Must be called after constructing the graph.
      */
     private IndexSet rankBarcodes(final Collection<Index> input) {
-        final Comparator<Index> comparator = new Comparator<Index>() {
-            @Override public int compare(final Index lhs, final Index rhs) {
-                // Remember: BIGGER scores == WORSE scores
-                int retval = rhs.score() - lhs.score();
-
-                if (retval == 0) {
-                    for (int i=0; i<lhs.sequence.length && retval == 0; ++i) retval = lhs.sequence[i] - rhs.sequence[i];
-                }
-
-                return retval;
+        final Comparator<Index> comparator = (lhs, rhs) -> {
+            // Remember: BIGGER scores == WORSE scores
+            int retval = rhs.score() - lhs.score();
+            if (retval == 0) {
+                for (int i=0; i<lhs.sequence.length && retval == 0; ++i) retval = lhs.sequence[i] - rhs.sequence[i];
             }
+
+            return retval;
         };
 
         final IndexSet set = new IndexSet(comparator);
@@ -531,21 +469,19 @@ public class PickIlluminaIndices extends CommandLineProgram {
             final Index lhs = bcs[i];
             final int firstJ = i+1;
 
-            exec.submit(new Runnable() {
-                @Override public void run() {
-                    for (int j=firstJ; j<len; ++j) {
-                        final Index rhs = bcs[j];
-                        final int distance = lhs.calculateEditDistance(rhs);
-                        if (distance <= EDIT_DISTANCE) {
-                            lhs.addRelated(rhs);
-                            rhs.addRelated(lhs);
-                        }
+            exec.submit((Runnable) () -> {
+                for (int j=firstJ; j<len; ++j) {
+                    final Index rhs = bcs[j];
+                    final int distance = lhs.calculateEditDistance(rhs);
+                    if (distance <= EDIT_DISTANCE) {
+                        lhs.addRelated(rhs);
+                        rhs.addRelated(lhs);
                     }
+                }
 
-                    final int count = counter.incrementAndGet();
-                    if (count % 1000 == 0) {
-                        log.info("    Processed " + count + " indices.");
-                    }
+                final int count = counter.incrementAndGet();
+                if (count % 1000 == 0) {
+                    log.info("    Processed " + count + " indices.");
                 }
             });
         }
@@ -561,7 +497,7 @@ public class PickIlluminaIndices extends CommandLineProgram {
 
     /** Generates all possible kmers of length and returns them as byte[]s. */
     List<byte[]> generateAllKmers(final int length) {
-        final List<byte[]> sofar = new LinkedList<byte[]>();
+        final List<byte[]> sofar = new LinkedList<>();
         final byte[] bases = {'A', 'C', 'G', 'T'};
 
         if (sofar.size() == 0) {
