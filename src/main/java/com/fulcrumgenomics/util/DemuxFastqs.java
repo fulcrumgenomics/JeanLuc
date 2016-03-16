@@ -148,7 +148,7 @@ public class DemuxFastqs extends CommandLineProgram {
     @Option(doc="The SAM tag for the molecular barcode.")
     public String MOLECULAR_BARCODE_TAG = "RX";
 
-    @Option(doc="A SAM tag per multiple molecular barcode if multiple barcodes are present. If fewer tags than barcodes are given, the additional barcodes will be concatenated and placed in the last tag.", optional = true)
+    @Option(doc="A SAM tag per molecular barcode if multiple barcodes are present. If fewer tags than barcodes are given, the additional barcodes will be concatenated and placed in the last tag.", optional = true)
     public List<String> MULTI_MOLECULAR_BARCODE_TAGS = new ArrayList<>();
 
     @Option(shortName="V", doc="A value describing how the quality values are encoded in the fastq.  Either Solexa for pre-pipeline 1.3 " +
@@ -511,7 +511,7 @@ public class DemuxFastqs extends CommandLineProgram {
             final String sampleId = writers[sampleOrdinal-1].getFileHeader().getReadGroups().get(0).getId();
 
             // Create the molecular barcode sequence tag
-            final byte[][] molecularBarcodes = getMolecularBarcodes(fastqRecords);
+            final List<String> molecularBarcodes = getMolecularBarcodes(fastqRecords);
             final String molecularBarcodeTag = IlluminaUtil.barcodeSeqsToString(molecularBarcodes);
 
             // Create the SAM records
@@ -534,13 +534,11 @@ public class DemuxFastqs extends CommandLineProgram {
                         final String molecularBarcode;
                         // if we are at the last tag, but there are more than one molecular barcodes left, concatenate the barcodes
                         // and store it in the last tag
-                        if (tagIndex == MULTI_MOLECULAR_BARCODE_TAGS.size()-1 && tagIndex < molecularBarcodes.length-1) {
-                            final byte[][] values = new byte[molecularBarcodes.length - tagIndex][];
-                            System.arraycopy(molecularBarcodes, tagIndex, values, 0, molecularBarcodes.length - tagIndex);
-                            molecularBarcode = IlluminaUtil.barcodeSeqsToString(values);
+                        if (tagIndex == MULTI_MOLECULAR_BARCODE_TAGS.size()-1 && tagIndex < molecularBarcodes.size()-1) {
+                            molecularBarcode = IlluminaUtil.barcodeSeqsToString(molecularBarcodes.subList(tagIndex, molecularBarcodes.size()));
                         }
                         else {
-                            molecularBarcode = new String(molecularBarcodes[tagIndex]);
+                            molecularBarcode = molecularBarcodes.get(tagIndex);
                         }
                         samRecord.setAttribute(MULTI_MOLECULAR_BARCODE_TAGS.get(tagIndex), molecularBarcode);
                     }
@@ -697,24 +695,15 @@ public class DemuxFastqs extends CommandLineProgram {
             return sampleBarcodeQualities;
         }
 
-        private byte[][] getMolecularBarcodes(final List<FastqRecord> records) {
-            final byte[][] molecularBarcodes = new byte[records.size()][];
-            int numNonEmptyMolecularBarcodes = 0;
+        private List<String> getMolecularBarcodes(final List<FastqRecord> records) {
+            final List<String> molecularBarcodes = new ArrayList<>(records.size());
             for (int i = 0; i < records.size(); i++) {
                 final FastqRecord record = records.get(i);
                 final ReadStructureInfo readStructureInfo = readStructureInfos.get(i);
-                molecularBarcodes[i] = getBasesAtCycles(record.getReadString().getBytes(), readStructureInfo.molecularBarcodeCycles);
-                if (molecularBarcodes[i].length > 0) numNonEmptyMolecularBarcodes++;
+                final byte[] molecularBarcode = getBasesAtCycles(record.getReadString().getBytes(), readStructureInfo.molecularBarcodeCycles);
+                if (molecularBarcode.length > 0) molecularBarcodes.add(StringUtil.bytesToString(molecularBarcode));
             }
-            // only return non-empty barcodes
-            final byte[][] nonEmptyMolecularBarcodes = new byte[numNonEmptyMolecularBarcodes][];
-            for (int i = 0, j = 0; i < molecularBarcodes.length; i++) {
-                if (molecularBarcodes[i].length > 0) {
-                    nonEmptyMolecularBarcodes[j] = molecularBarcodes[i];
-                    j++;
-                }
-            }
-            return nonEmptyMolecularBarcodes;
+            return molecularBarcodes;
         }
     }
 
