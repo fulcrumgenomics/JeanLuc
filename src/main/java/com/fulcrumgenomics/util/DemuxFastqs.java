@@ -148,6 +148,9 @@ public class DemuxFastqs extends CommandLineProgram {
     @Option(doc="The SAM tag for the molecular barcode.")
     public String MOLECULAR_BARCODE_TAG = "RX";
 
+    @Option(doc="A SAM tag per multiple molecular barcode if multiple barcodes are present. If fewer tags than barcodes are given, the additional barcodes will be concatenated and placed in the last tag.", optional = true)
+    public List<String> MULTI_MOLECULAR_BARCODE_TAGS = new ArrayList<>();
+
     @Option(shortName="V", doc="A value describing how the quality values are encoded in the fastq.  Either Solexa for pre-pipeline 1.3 " +
             "style scores (solexa scaling + 66), Illumina for pipeline 1.3 and above (phred scaling + 64) or Standard for phred scaled " +
             "scores with a character shift of 33.  If this value is not specified, the quality format will be detected automatically.", optional = true)
@@ -508,13 +511,14 @@ public class DemuxFastqs extends CommandLineProgram {
             final String sampleId = writers[sampleOrdinal-1].getFileHeader().getReadGroups().get(0).getId();
 
             // Create the molecular barcode sequence tag
-            final String molecularBarcodeTag = getMolecularBarcode(fastqRecords);
+            final byte[][] molecularBarcodes = getMolecularBarcodes(fastqRecords);
+            final String molecularBarcodeTag = IlluminaUtil.barcodeSeqsToString(molecularBarcodes);
 
             // Create the SAM records
             final List<SAMRecord> samRecords = new ArrayList<>();
-            for (int i = 0; i < fastqRecords.size(); i++) {
-                final FastqRecord record = fastqRecords.get(i);
-                final ReadStructureInfo readStructureInfo = readStructureInfos.get(i);
+            for (int recordIndex = 0; recordIndex < fastqRecords.size(); recordIndex++) {
+                final FastqRecord record = fastqRecords.get(recordIndex);
+                final ReadStructureInfo readStructureInfo = readStructureInfos.get(recordIndex);
 
                 // ignore records without template sequence
                 if (readStructureInfo.templates.isEmpty()) continue;
@@ -525,6 +529,22 @@ public class DemuxFastqs extends CommandLineProgram {
                 final SAMRecord samRecord = makeSAMRecord(header, record, readStructureInfo, sampleId, samRecords.isEmpty());
                 samRecord.setAttribute("BC", new String(sampleBarcodeReadBases));
                 samRecord.setAttribute(MOLECULAR_BARCODE_TAG, molecularBarcodeTag);
+                if (!MULTI_MOLECULAR_BARCODE_TAGS.isEmpty()) {
+                    for (int tagIndex = 0; tagIndex < MULTI_MOLECULAR_BARCODE_TAGS.size(); tagIndex++) {
+                        final String molecularBarcode;
+                        // if we are at the last tag, but there are more than one molecular barcodes left, concatenate the barcodes
+                        // and store it in the last tag
+                        if (tagIndex == MULTI_MOLECULAR_BARCODE_TAGS.size()-1 && tagIndex < molecularBarcodes.length-1) {
+                            final byte[][] values = new byte[molecularBarcodes.length - tagIndex][];
+                            System.arraycopy(molecularBarcodes, tagIndex, values, 0, molecularBarcodes.length - tagIndex);
+                            molecularBarcode = IlluminaUtil.barcodeSeqsToString(values);
+                        }
+                        else {
+                            molecularBarcode = new String(molecularBarcodes[tagIndex]);
+                        }
+                        samRecord.setAttribute(MULTI_MOLECULAR_BARCODE_TAGS.get(tagIndex), molecularBarcode);
+                    }
+                }
                 writer.addAlignment(samRecord);
                 samRecords.add(samRecord);
             }
@@ -663,7 +683,7 @@ public class DemuxFastqs extends CommandLineProgram {
             return sampleBarcode;
         }
 
-        private byte[] getSampleBarcodeQualities(final List<FastqRecord>  records) {
+        private byte[] getSampleBarcodeQualities(final List<FastqRecord> records) {
             final int numCycles = readStructureInfos.stream().mapToInt(r -> r.sampleBarcodes.getTotalCycles()).sum();
             final byte[] sampleBarcodeQualities = new byte[numCycles];
             int sampleBarcodeQualitiesOffset = 0;
@@ -677,14 +697,24 @@ public class DemuxFastqs extends CommandLineProgram {
             return sampleBarcodeQualities;
         }
 
-        private String getMolecularBarcode(final List<FastqRecord>  records) {
-            final byte[][] molecularBarcode = new byte[records.size()][];
+        private byte[][] getMolecularBarcodes(final List<FastqRecord> records) {
+            final byte[][] molecularBarcodes = new byte[records.size()][];
+            int numNonEmptyMolecularBarcodes = 0;
             for (int i = 0; i < records.size(); i++) {
                 final FastqRecord record = records.get(i);
                 final ReadStructureInfo readStructureInfo = readStructureInfos.get(i);
-                molecularBarcode[i] = getBasesAtCycles(record.getReadString().getBytes(), readStructureInfo.molecularBarcodeCycles);
+                molecularBarcodes[i] = getBasesAtCycles(record.getReadString().getBytes(), readStructureInfo.molecularBarcodeCycles);
+                if (molecularBarcodes[i].length > 0) numNonEmptyMolecularBarcodes++;
             }
-            return IlluminaUtil.barcodeSeqsToString(molecularBarcode);
+            // only return non-empty barcodes
+            final byte[][] nonEmptyMolecularBarcodes = new byte[numNonEmptyMolecularBarcodes][];
+            for (int i = 0, j = 0; i < molecularBarcodes.length; i++) {
+                if (molecularBarcodes[i].length > 0) {
+                    nonEmptyMolecularBarcodes[j] = molecularBarcodes[i];
+                    j++;
+                }
+            }
+            return nonEmptyMolecularBarcodes;
         }
     }
 
